@@ -58,12 +58,12 @@ fun FoodPreferencesScreen(
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
-            Text(
-                text = "SKIP",
-                fontSize = 14.sp,
-                color = Color.Gray,
-                modifier = Modifier.clickable { onNext() }
-            )
+//            Text(
+//                text = "SKIP",
+//                fontSize = 14.sp,
+//                color = Color.Gray,
+//                modifier = Modifier.clickable { onNext() }
+//            )
         }
         Spacer(modifier = Modifier.height(25.dp))
 

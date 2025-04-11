@@ -76,12 +76,12 @@ fun ProfileSelectionScreen(
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
-            Text(
-                text = "SKIP",
-                fontSize = 14.sp,
-                color = Color.Gray,
-                modifier = Modifier.clickable { onNext(name, age, "") }
-            )
+//            Text(
+//                text = "SKIP",
+//                fontSize = 14.sp,
+//                color = Color.Gray,
+//                modifier = Modifier.clickable { onNext(name, age, "") }
+//            )
         }
 
         Spacer(modifier = Modifier.height(25.dp))

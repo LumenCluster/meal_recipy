@@ -29,6 +29,7 @@ import screen.DetailScreen
 import screen.DinnerMealScreen
 import screen.FirstScreen
 import screen.LunchMealScreen
+import screen.MainScreen
 import screen.Tabs
 import screen.updateMealScreen
 import ui.home.HomeScreen
@@ -46,6 +47,7 @@ sealed class Screen(val route: String) {
 @Composable
 fun AppNavigation(
     homeViewModel: HomeViewModel = viewModel(),
+    onBackToHome: () -> Unit,
 
 //    profileViewModel: ProfileViewModel = viewModel(factory = ProfileViewModelFactory(Graph.repo)),
     onScreenChanged: (String) -> Unit
@@ -99,9 +101,9 @@ fun AppNavigation(
             LaunchedEffect(Unit) {
                 onScreenChanged("view")
             }
-            val navController = rememberNavController() // Ensure NavController is available
             RecipyNav(onScreenChanged = { }, onBackToHome ={
-            navController.popBackStack()} )
+                navController.popBackStack()
+            } )
 
         }
 
@@ -195,9 +197,8 @@ fun AppNavigation(
             val date = dateString?.takeIf { it.matches(Regex("""\d{4}-\d{2}-\d{2}""")) }
                 ?.let { LocalDate.parse(it) }
 
-            // Handle case if date is invalid
             if (date == null) {
-                // Handle error: either navigate back or use a default value
+
             }
 
             DinnerMealScreen(
@@ -267,8 +268,13 @@ fun AppNavigation(
                 },
                 onNavigateToUpdateMeal = { category, selectedDay, mealId ->
                     navController.navigate("updateMeal/$category/${selectedDay.toString()}/$mealId")
+                },
+                onBackClick = {
+                    navController.popBackStack()
+
                 }
-            )
+
+                )
         }
         // Add Meal Screen
         composable(
@@ -278,7 +284,7 @@ fun AppNavigation(
                 navArgument("date") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            onScreenChanged("AddMealScreen") // ✅ Notify MainScreen
+            onScreenChanged("AddMealScreen")
 
             val category = backStackEntry.arguments?.getString("category")!!
             val date = backStackEntry.arguments?.getString("date")!!.toLocalDate()
@@ -303,7 +309,7 @@ fun AppNavigation(
                 navArgument("mealId") { type = NavType.IntType }
             )
         ) { backStackEntry ->
-            onScreenChanged("UpdateMealScreen") // ✅ Notify MainScreen
+            onScreenChanged("UpdateMealScreen")
 
             val category = backStackEntry.arguments?.getString("category") ?: ""
             val date = LocalDate.parse(backStackEntry.arguments?.getString("date") ?: "")

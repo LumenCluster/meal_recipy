@@ -54,41 +54,38 @@ import room_cmp.composeapp.generated.resources.onback
 import room_cmp.composeapp.generated.resources.veg
 import ui.home.MealPlanViewModel
 
+
 @Composable
 fun updateMealScreen(
     viewModel: MealPlanViewModel,
     category: String,
     date: LocalDate,
-    mealId: Int, // Add mealId as a parameter
+    mealId: Int,
     onMealUpdated: () -> Unit,
     onBackPress: () -> Unit
-// Add onMealUpdated as a callback parameter
 ) {
     var mealName by rememberSaveable { mutableStateOf("") }
     var timeTaken by rememberSaveable { mutableStateOf(0) }
     var difficulty by rememberSaveable { mutableStateOf("Difficulty") }
     var servings by rememberSaveable { mutableStateOf(1) }
     var mealType by rememberSaveable { mutableStateOf("Vegetarian") }
+    var validationError by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-
             .padding(16.dp)
     ) {
         // Header Section
         Icon(
             painter = painterResource(Res.drawable.onback),
-            contentDescription = "About Icon",
-
+            contentDescription = "Back",
             tint = Color.Black,
-            modifier = Modifier
-//                    .padding(8.dp) // <-- Add your desired padding here
-                .clickable { onBackPress() }
+            modifier = Modifier.clickable { onBackPress() }
         )
-        Spacer(modifier = Modifier.height(30.dp))
 
+        Spacer(modifier = Modifier.height(30.dp))
 
         Text(
             text = "Meal Plan",
@@ -99,12 +96,11 @@ fun updateMealScreen(
 
         Text(
             text = "Plan Meal For",
-            style = MaterialTheme.typography.subtitle1,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 13.sp
+            style = MaterialTheme.typography.subtitle1.copy(fontSize = 13.sp),
+            fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "${date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}, ${date.toString()}",
+            text = "${date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}, ${date}",
             style = MaterialTheme.typography.subtitle1,
             modifier = Modifier.padding(vertical = 4.dp)
         )
@@ -119,25 +115,19 @@ fun updateMealScreen(
 
         Text(
             text = "Add Meal Plan",
-            style = MaterialTheme.typography.subtitle1,
-            fontSize = 13.sp
+            style = MaterialTheme.typography.subtitle1.copy(fontSize = 13.sp)
         )
-        // Meal Name Input
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    color = Color(0xFFF5F5F5),
-                    shape = RoundedCornerShape(10.dp)
-                )
+                .background(Color(0xFFF5F5F5), RoundedCornerShape(10.dp))
         ) {
             TextField(
                 value = mealName,
                 onValueChange = { mealName = it },
                 placeholder = { Text("Add Meal Name Please...") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Transparent),
+                modifier = Modifier.fillMaxWidth().background(Color.Transparent),
                 colors = TextFieldDefaults.textFieldColors(
                     backgroundColor = Color.Transparent,
                     focusedIndicatorColor = Color.Transparent,
@@ -148,50 +138,37 @@ fun updateMealScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
         DifficultyAndTimeTaken(
             difficulty = difficulty,
             timeTaken = if (timeTaken > 0) "$timeTaken minutes" else "Time Taken",
             onDifficultySelected = { difficulty = it },
             onTimeTakenSelected = { selected ->
-                timeTaken = selected.filter { it.isDigit() }.toInt()
+                timeTaken = selected.filter { it.isDigit() }.toIntOrNull() ?: 0
             }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Meal Servings",
-            style = MaterialTheme.typography.subtitle1,
-            fontSize = 12.sp
-        )
-
+        Text(text = "Meal Servings", style = MaterialTheme.typography.subtitle1.copy(fontSize = 12.sp))
         Spacer(modifier = Modifier.height(5.dp))
         MealServings(
             servings = servings,
             onIncrement = { servings++ },
             onDecrement = { if (servings > 1) servings-- }
         )
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Add Meal Plan",
-            style = MaterialTheme.typography.subtitle1,
-            fontSize = 12.sp
-        )
+        Text(text = "Add Meal Plan", style = MaterialTheme.typography.subtitle1.copy(fontSize = 12.sp))
         Spacer(modifier = Modifier.height(5.dp))
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+
+        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             ToggleBtn(
                 text = "Vegetarian",
                 isSelected = mealType == "Vegetarian",
                 onSelected = { mealType = "Vegetarian" },
                 icon = {
-                    Image(
-                        painter = painterResource(Res.drawable.veg), // Replace with dropdown arrow resource
-                        contentDescription = "Vegetarian Icon",
-//                        tint = if (mealType == "Vegetarian") Color.White else Color(0xFF007370)
-                    )
+                    Image(painter = painterResource(Res.drawable.veg), contentDescription = "Vegetarian Icon")
                 }
             )
             ToggleBtn(
@@ -199,48 +176,57 @@ fun updateMealScreen(
                 isSelected = mealType == "Non-Vegetarian",
                 onSelected = { mealType = "Non-Vegetarian" },
                 icon = {
-                    Image(
-                        painter = painterResource(Res.drawable.non), // Replace with dropdown arrow resource
-                        contentDescription = "Non-Vegetarian Icon",
-//                        tint = if (mealType == "Non-Vegetarian") Color.White else Color(0xFF666666)
-                    )
+                    Image(painter = painterResource(Res.drawable.non), contentDescription = "Non-Vegetarian Icon")
                 }
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Show error message if validation fails
+        if (validationError.isNotEmpty()) {
+            Text(
+                text = validationError,
+                color = Color.Red,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Save Meal Button
         Button(
             onClick = {
-                viewModel.updateMealPlan(
-                    id = mealId,
-                    day = date.dayOfWeek.name,
-                    category = category,
-                    description = mealName,
-                    timeTaken = timeTaken,
-                    difficulty = difficulty,
-                    healthiness = "", // Optional: Add healthiness if needed
-                    servings = servings,
-                    date = date.toString(),
-                    vegetarian = (mealType == "Vegetarian")
-                )
-                onMealUpdated() // Trigger the callback after updating the database
+                if (mealName.isBlank() || timeTaken == 0 || difficulty == "Difficulty") {
+                    validationError = "Enter data in all fields to update"
+                } else {
+                    validationError = ""
+                    viewModel.updateMealPlan(
+                        id = mealId,
+                        day = date.dayOfWeek.name,
+                        category = category,
+                        description = mealName,
+                        timeTaken = timeTaken,
+                        difficulty = difficulty,
+                        healthiness = "",
+                        servings = servings,
+                        date = date.toString(),
+                        vegetarian = (mealType == "Vegetarian")
+                    )
+                    onMealUpdated()
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp), // Set the height to 50dp
-            colors = ButtonDefaults.buttonColors(
-                backgroundColor = Color(0xFF007370) // Background color
-            )
+                .height(50.dp),
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF007370))
         ) {
-            Text(
-                text = "Update",
-                color = Color.White // Set the text color to white
-            )
+            Text(text = "Update", color = Color.White)
         }
     }
 }
+
 
 
 @Composable

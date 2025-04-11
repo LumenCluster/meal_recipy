@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import database.entity.MealPlan
 import kotlinx.datetime.*
 import org.jetbrains.compose.resources.DrawableResource
@@ -36,20 +37,24 @@ import room_cmp.composeapp.generated.resources.icon_easy
 import room_cmp.composeapp.generated.resources.icon_healthy
 import room_cmp.composeapp.generated.resources.icon_time
 import room_cmp.composeapp.generated.resources.meal
+import room_cmp.composeapp.generated.resources.onback
 
 val LocalDateSaver = object : Saver<LocalDate, String> {
     override fun SaverScope.save(value: LocalDate): String = value.toString()
     override fun restore(value: String): LocalDate = LocalDate.parse(value)
 }
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: MealPlanViewModel,
     onNavigateToAddMeal: (String, LocalDate) -> Unit,
     onNavigateToUpdateMeal: (String, LocalDate, Int) -> Unit,
-    onNavigateToCategoryScreen: (LocalDate) -> Unit
-) {
+    onNavigateToCategoryScreen: (LocalDate) -> Unit,
+    onBackClick: () -> Unit
+
+    ) {
     val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
     val daysOfWeek = (0 until 7).map { offset -> today.plus(offset, DateTimeUnit.DAY) }
     var selectedDay by rememberSaveable(stateSaver = LocalDateSaver) { mutableStateOf(daysOfWeek.first()) }
@@ -57,11 +62,24 @@ fun HomeScreen(
     Column(
         modifier = modifier.fillMaxSize().padding(16.dp)
     ) {
+        Icon(
+            painter = painterResource(Res.drawable.onback),
+            contentDescription = "About Icon",
+
+            tint = Color.Black,
+            modifier = Modifier
+//                    .padding(8.dp) // <-- Add your desired padding here
+                .clickable {
+                     onBackClick()
+                }
+        )
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = "Meal Plan",
             style = MaterialTheme.typography.h6,
             fontWeight = FontWeight.Bold
         )
+
         Spacer(modifier = Modifier.height(16.dp))
         DaysOfWeekHeader(daysOfWeek, selectedDay, onDaySelected = { selectedDay = it })
         val mealPlanState by viewModel.mealPlanState.collectAsState()

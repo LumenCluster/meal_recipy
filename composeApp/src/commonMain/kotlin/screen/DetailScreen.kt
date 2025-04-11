@@ -29,6 +29,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import registerBackHandler
 import room_cmp.composeapp.generated.resources.Res
 import room_cmp.composeapp.generated.resources.cancel
 import room_cmp.composeapp.generated.resources.onback

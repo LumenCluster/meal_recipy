@@ -1,9 +1,14 @@
 package navigation
 
+import ExitDialog
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -12,6 +17,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import exitApp
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toLocalDate
 import registerBackHandler
@@ -27,13 +33,34 @@ fun HomeNavigation(
     onScreenChanged: (String) -> Unit,
     onBackToHome: () -> Unit
 
-    // ✅ Add callback to track screen changes
 ) {
     val navController = rememberNavController()
+    val currentBackStackEntry = navController.currentBackStackEntryFlow.collectAsState(null)
+    val currentRoute = currentBackStackEntry.value?.destination?.route
+    var showExitDialog by remember { mutableStateOf(false) }
+
     registerBackHandler {
-        onBackToHome()
+        if (currentRoute == "home") {
+            // We're on HomeScreen -> show exit dialog
+            showExitDialog = true // Show the exit confirmation dialog
+
+        } else {
+            // On any other screen -> just pop the back stack
+            navController.popBackStack()
+        }
     }
 
+    if (showExitDialog) {
+        ExitDialog(
+            onConfirm = {
+                exitApp()
+                showExitDialog = false
+            },
+            onDismiss = {
+                showExitDialog = false
+            }
+        )
+    }
     NavHost(navController = navController, startDestination = "home") {
         // Home Screen
         composable("home") {
@@ -49,7 +76,11 @@ fun HomeNavigation(
                 },
                 onNavigateToUpdateMeal = { category, selectedDay, mealId ->
                     navController.navigate("updateMeal/$category/${selectedDay.toString()}/$mealId")
-                }
+                },
+                onBackClick = {
+                    onBackToHome()
+                } // Handle back navigation
+
             )
         }
 

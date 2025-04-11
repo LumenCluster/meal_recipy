@@ -24,6 +24,7 @@ import screen.ProfileScreen
 import viewModel.ProfileViewModelFactory
 import org.example.compose.home.ProfileViewModel
 import org.example.compose.home.HomeViewModel
+import screen.CategoryScreen
 import screen.MainScreen
 
 
@@ -39,7 +40,14 @@ fun ProfileScreenRoute(
 
     NavHost(navController = navController, startDestination = "profile_screen") {
         composable("profile_screen") {
-            ProfileScreen(navController = navController, profileViewModel = profileViewModel, onBackPress = { navController.popBackStack() } // Handle back press
+            ProfileScreen(navController = navController, profileViewModel = profileViewModel,
+                onBackPress = {
+//                    navController.popBackStack()
+                    navController.navigate("main") {
+                        popUpTo("profile_screen") { inclusive = true }
+                    }
+
+                } // Handle back press
             )
         }
         composable("signup") {
@@ -138,6 +146,10 @@ fun ProfileScreenRoute(
                 },
                 onNavigateToUpdateMeal = { category, selectedDay, mealId ->
                     navController.navigate("updateMeal/$category/${selectedDay.toString()}/$mealId")
+                },
+                onBackClick = {
+                    navController.popBackStack()
+
                 }
             )
         }
@@ -186,7 +198,28 @@ fun ProfileScreenRoute(
                 onMealUpdated = { navController.popBackStack() }
             )
         }
+        composable(
+            route = "category/{date}",
+            arguments = listOf(
+                navArgument("date") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+//            onScreenChanged("CategoryScreen") // ✅ Notify MainScreen
 
+            val date = backStackEntry.arguments?.getString("date")!!.toLocalDate()
+            CategoryScreen(
+                viewModel = mealViewModel,
+                selectedDay = date,
+                onNavigateToAddMeal = { category, selectedDay ->
+                    navController.navigate("addMeal/$category/${selectedDay.toString()}")
+                },
+                onNavigateToUpdateMeal = { category, selectedDay, mealId ->
+                    navController.navigate("updateMeal/$category/${selectedDay.toString()}/$mealId")
+                },
+                onBackPress = { navController.popBackStack() } // Handle back navigation
+
+            )
+        }
     }
 
 

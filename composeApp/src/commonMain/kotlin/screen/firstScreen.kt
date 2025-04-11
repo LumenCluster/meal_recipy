@@ -102,9 +102,16 @@ fun FirstScreen(
                         .padding(start = 16.dp, end = 16.dp)
                 ) {
                     val userProfile by remember { profileViewModel.userProfile }
+
                     if (userProfile != null) {
-                        HeaderSection(userProfile!!)
+                        HeaderSection(
+                            profile = userProfile!!,
+                            onProfileClick = {
+                                navController.navigate("profile") // replace "profile" with your actual route
+                            }
+                        )
                     }
+
 
                     Spacer(modifier = Modifier.height(30.dp))
 
@@ -141,6 +148,40 @@ fun FirstScreen(
     }
 }
 
+@OptIn(ExperimentalResourceApi::class)
+@Composable
+fun HeaderSection(
+    profile: Profile,
+    onProfileClick: () -> Unit // Lambda for handling click event
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = "Meal Planner App",
+                style = MaterialTheme.typography.h6,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Welcome, ${profile.name}!",
+                style = MaterialTheme.typography.subtitle1,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+
+        Image(
+            painter = painterResource(getDrawableResource(profile.profileImg)),
+            contentDescription = "Profile Picture",
+            modifier = Modifier
+                .size(50.dp)
+                .clip(CircleShape)
+                .clickable { onProfileClick() } // Navigate on click
+        )
+    }
+}
 
 @OptIn(ExperimentalResourceApi::class)
 @Composable
@@ -376,35 +417,7 @@ fun FoodItem(meal: Meal, onMealClick: () -> Unit, modifier: Modifier = Modifier)
 }
 
 
-@OptIn(ExperimentalResourceApi::class)
-@Composable
-fun HeaderSection(profile: Profile) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Text(
-                text = "Meal Planner App",
-                style = MaterialTheme.typography.h6,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Welcome, ${profile.name}!",
-                style = MaterialTheme.typography.subtitle1,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-        Image(
-            painter = painterResource(getDrawableResource(profile.profileImg)),
-            contentDescription = "Profile Picture",
-            modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape)
-        )
-    }
-}
+
 
 @Composable
 fun SectionHeader(title: String, actionText: String,     onActionClick: () -> Unit // <-- Add this line

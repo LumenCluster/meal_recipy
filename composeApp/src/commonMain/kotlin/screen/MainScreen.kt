@@ -52,7 +52,8 @@ enum class Tabs @OptIn(ExperimentalResourceApi::class) constructor(val text: Str
 fun MainScreen(
     homeViewModel: HomeViewModel = viewModel(),
     profileViewModel: ProfileViewModel = viewModel(),
-    mealViewModel: MealPlanViewModel = viewModel()
+    mealViewModel: MealPlanViewModel = viewModel(),
+
 ) {
     val coroutineScope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { Tabs.entries.size })
@@ -75,7 +76,12 @@ fun MainScreen(
                     Tabs.Home -> {
                         AppNavigation(
                             homeViewModel = homeViewModel,
-                            onScreenChanged = { screenName -> currentScreen = screenName }
+                            onScreenChanged = { screenName -> currentScreen = screenName },
+                            onBackToHome = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(Tabs.Home.ordinal)
+                                }
+                            }
                         )
                     }
                     Tabs.Planner -> {
@@ -94,7 +100,7 @@ fun MainScreen(
                             onScreenChanged = { screenName -> addScreen = screenName },
                             onBackToHome = {
                                 coroutineScope.launch {
-                                    pagerState.animateScrollToPage(Tabs.Planner.ordinal)
+                                    pagerState.animateScrollToPage(Tabs.Home.ordinal)
                                 }
                             }
                         )
