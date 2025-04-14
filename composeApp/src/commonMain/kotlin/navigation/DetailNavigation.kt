@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.format
 import kotlinx.datetime.toLocalDate
+import kotlinx.datetime.toLocalDateTime
 import org.example.compose.home.HomeViewModel
 import org.example.compose.home.ProfileViewModel
 import screen.AboutAppScreen
@@ -34,6 +35,7 @@ import screen.Tabs
 import screen.updateMealScreen
 import ui.home.HomeScreen
 import ui.home.MealPlanViewModel
+import ui.home.MealPlanViewModelFactory
 import viewModel.ProfileViewModelFactory
 
 
@@ -54,7 +56,7 @@ fun AppNavigation(
 
 ) {
     val navController = rememberNavController()
-    val mealViewModel = remember { MealPlanViewModel(Graph.repository) }
+    val mealViewModel: MealPlanViewModel = viewModel(factory = MealPlanViewModelFactory(Graph.repository))
     val profileViewModel = remember { ProfileViewModel(Graph.repo) }
 
 
@@ -83,7 +85,7 @@ fun AppNavigation(
             val mealId = backStackEntry.arguments?.getString("mealId") ?: return@composable
             DetailScreen(
                 id = mealId,
-                navigateBack = { navController.popBackStack() }
+                navigateBack = { navController.navigateUp() }
             )
         }
 
@@ -93,8 +95,6 @@ fun AppNavigation(
             }
             val navController0 = rememberNavController()
             ProfileScreenRoute(navController0)
-
-
         }
 
         composable("view") {
@@ -102,7 +102,7 @@ fun AppNavigation(
                 onScreenChanged("view")
             }
             RecipyNav(onScreenChanged = { }, onBackToHome ={
-                navController.popBackStack()
+                navController.navigateUp()
             } )
 
         }
@@ -112,7 +112,7 @@ fun AppNavigation(
             LaunchedEffect(Unit) {
                 onScreenChanged("about")
             }
-            AboutAppScreen(onBackClick = { navController.popBackStack() })
+            AboutAppScreen(onBackClick = { navController.navigateUp() })
         }
 
 
@@ -133,7 +133,6 @@ fun AppNavigation(
 
             // If date is invalid, you can handle this case
             if (date == null) {
-                // Handle the error case or use a default date
             }
 
             BreakfastMealScreen(
@@ -146,7 +145,7 @@ fun AppNavigation(
                 onNavigateToUpdateMeal = { category, selectedDay, mealId ->
                     navController.navigate("updateMeal/$category/${selectedDay.toString()}/$mealId")
                 },
-                onBackPress = { navController.popBackStack() } // Handle back press
+                onBackPress = { navController.navigateUp() } // Handle back press
             )
         }
 
@@ -179,7 +178,7 @@ fun AppNavigation(
                 onNavigateToUpdateMeal = { category, selectedDay, mealId ->
                     navController.navigate("updateMeal/$category/${selectedDay.toString()}/$mealId")
                 },
-                onBackPress = { navController.popBackStack() } // Handle back navigation
+                onBackPress = { navController.navigateUp() } // Handle back navigation
             )
         }
         composable(
@@ -211,7 +210,7 @@ fun AppNavigation(
                 onNavigateToUpdateMeal = { category, selectedDay, mealId ->
                     navController.navigate("updateMeal/$category/${selectedDay.toString()}/$mealId")
                 },
-                onBackPress = { navController.popBackStack() } // Handle back navigation
+                onBackPress = { navController.navigateUp() } // Handle back navigation
             )
         }
 
@@ -236,7 +235,7 @@ fun AppNavigation(
                 onNavigateToUpdateMeal = { category, selectedDay, mealId ->
                     navController.navigate("updateMeal/$category/${selectedDay.toString()}/$mealId")
                 },
-                onBackPress = { navController.popBackStack() } // Handle back navigation
+                onBackPress = { navController.navigateUp() } // Handle back navigation
 
             )
         }
@@ -270,13 +269,13 @@ fun AppNavigation(
                     navController.navigate("updateMeal/$category/${selectedDay.toString()}/$mealId")
                 },
                 onBackClick = {
-                    navController.popBackStack()
+                    navController.navigateUp()
 
                 }
 
                 )
         }
-        // Add Meal Screen
+
         composable(
             route = "addMeal/{category}/{date}",
             arguments = listOf(
@@ -295,7 +294,7 @@ fun AppNavigation(
                 onMealSaved = {
                     navController.popBackStack()
                 },
-                onBackPress = { navController.popBackStack() } // Handle back navigation
+                onBackPress = { navController.navigateUp() } // Handle back navigation
 
             )
         }
@@ -314,15 +313,35 @@ fun AppNavigation(
             val category = backStackEntry.arguments?.getString("category") ?: ""
             val date = LocalDate.parse(backStackEntry.arguments?.getString("date") ?: "")
             val mealId = backStackEntry.arguments?.getInt("mealId") ?: 0
-
+            val currentDate = kotlinx.datetime.Clock.System.now()
+                .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date
             updateMealScreen(
                 viewModel = mealViewModel,
                 category = category,
                 date = date,
                 mealId = mealId,
-                onBackPress = { navController.popBackStack() } ,// Handle back navigation
+                onBackPress = { navController.navigateUp() } ,// Handle back navigation
+                onMealUpdated ={
+                    navController.navigateUp()                }
 
-                        onMealUpdated = { navController.popBackStack() }
+
+//                {
+//                    when (category.lowercase()) {
+//                        "Breakfast" -> navController.navigate("breakfast/$currentDate") // Correct format YYYY-MM-DD
+//                        {
+//                            popUpTo("updateMeal/$category/$date/$mealId") { inclusive = true }
+//                            mealViewModel.loadMealPlans()
+//                        }
+//                        "lunch" -> navController.navigate("Lunch/${date}") {
+//                            popUpTo("updateMeal/$category/$date/$mealId") { inclusive = true }
+//                        }
+//                        "dinner" -> navController.navigate("Dinner/${date}") {
+//                            popUpTo("updateMeal/$category/$date/$mealId") { inclusive = true }
+//                        }
+//                        else -> navController.popBackStack() // fallback
+//                    }
+//                }
+
             )
 
 

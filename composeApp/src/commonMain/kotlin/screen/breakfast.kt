@@ -6,16 +6,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -29,7 +24,6 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import room_cmp.composeapp.generated.resources.Res
-import room_cmp.composeapp.generated.resources.abut
 import room_cmp.composeapp.generated.resources.back
 import room_cmp.composeapp.generated.resources.break_fast
 import room_cmp.composeapp.generated.resources.empty
@@ -49,50 +43,33 @@ fun BreakfastMealScreen(
     onNavigateToUpdateMeal: (String, LocalDate, Int) -> Unit,
     onBackPress: () -> Unit
 ) {
+    // Collect state and ensure recomposition on changes
+    val mealPlanState by viewModel.mealPlanState.collectAsState()
+    val mealsForDay by derivedStateOf {
+        mealPlanState.groupedByDay[selectedDay.dayOfWeek.name].orEmpty()
+    }
+
+    // Refresh data when screen is focused
+    LaunchedEffect(Unit) {
+        viewModel.loadMealPlans()
+    }
+
     Column(
-        modifier = Modifier.fillMaxSize()
-            .background(Color.White)
+        modifier = Modifier.fillMaxSize().background(Color.White)
     ) {
-        // Image with top gradient and back button overlay
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp)
+            modifier = Modifier.fillMaxWidth().height(300.dp)
         ) {
-            // Background Image
             Image(
                 painter = painterResource(Res.drawable.break_fast),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
             )
 
-            // Top Gradient Overlay
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp) // Gradient only at the top
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xCF000000), // 80% Black
-                                Color(0xAC2A2A2A), // 100% Dark Gray
-                                Color(0x00FFFFFF)  // Fully Transparent
-                            )
-                        )
-                    )
-                    .align(Alignment.TopCenter)
-            )
-
-            // Back Button
             IconButton(
                 onClick = { onBackPress() },
-                modifier = Modifier
-                    .padding(16.dp)
-                    .size(36.dp)
-                    .align(Alignment.TopStart)
+                modifier = Modifier.padding(16.dp).size(36.dp).align(Alignment.TopStart)
             ) {
                 Icon(
                     painter = painterResource(Res.drawable.back),
@@ -104,9 +81,8 @@ fun BreakfastMealScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Date
         Text(
-            text = "${selectedDay.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}, ${selectedDay.toString()}",
+            text = "${selectedDay.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}, ${selectedDay}",
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp)
@@ -119,28 +95,22 @@ fun BreakfastMealScreen(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-        val mealPlanState by viewModel.mealPlanState.collectAsState()
-
-        // Show only breakfast meals for the selected day
-        val mealsForDay = mealPlanState.groupedByDay[selectedDay.dayOfWeek.name].orEmpty()
-            .filterKeys { it == "Breakfast" }
-
+        // Key added to force recomposition when meals change
         DayMealPlanCard0(
             day = selectedDay,
             meals = mealsForDay,
+            key = mealsForDay.hashCode()
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ✅ Hide "EDIT MEAL" button if there are no meals
         val hasMeals = mealsForDay["Breakfast"]?.isNotEmpty() == true
 
         if (hasMeals) {
             Button(
                 onClick = {
-                    val firstMeal = mealsForDay["Breakfast"]?.firstOrNull()
-                    if (firstMeal != null) {
-                        onNavigateToUpdateMeal("Breakfast", selectedDay, firstMeal.id)
+                    mealsForDay["Breakfast"]?.firstOrNull()?.let { meal ->
+                        onNavigateToUpdateMeal("Breakfast", selectedDay, meal.id)
                     }
                 },
                 modifier = Modifier
@@ -156,47 +126,54 @@ fun BreakfastMealScreen(
     }
 }
 
-
-
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun DayMealPlanCard0(
     day: LocalDate,
     meals: Map<String, List<MealPlan>>,
+    key: Int? = null
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
-        val category = "Breakfast"
-        val mealList = meals[category]?.filter { it.date == day.toString() } ?: emptyList()
+    key(key) { // ✅ Correct usage
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp)
+        ) {
+            val category = "Breakfast"
+            val mealList = meals[category]?.filter { it.date == day.toString() } ?: emptyList()
 
-        if (mealList.isNotEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-            ) {
-                mealList.forEach { meal ->
-                    MealItem0(meal = meal)
-                    Spacer(modifier = Modifier.height(8.dp))
+            if (mealList.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    mealList.forEach { meal ->
+                        MealItem0(meal = meal)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
-            }
-        } else {
-            // When there are no meals, show a placeholder UI
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Image(
-                    painter = painterResource(Res.drawable.empty), // Replace with a relevant empty state image
-                    contentDescription = "No meals",
-                    modifier = Modifier.size(100.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "No meals added for breakfast.",
-                    fontSize = 14.sp,
-                    color = Color.Gray,
-                    fontWeight = FontWeight.Medium
-                )
-
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(Res.drawable.empty),
+                        contentDescription = "No meals",
+                        modifier = Modifier.size(100.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "No meals added for breakfast.",
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }
@@ -205,17 +182,14 @@ fun DayMealPlanCard0(
 
 @OptIn(ExperimentalResourceApi::class)
 @Composable
-fun MealItem0(
-    meal: MealPlan,
-//    onDelete: (MealPlan) -> Unit,
-//    onUpdate: (MealPlan) -> Unit
-) {
-    var description by rememberSaveable { mutableStateOf(meal.description) }
-    var timeTaken by rememberSaveable { mutableStateOf(meal.timeTaken) }
-    var difficulty by rememberSaveable { mutableStateOf(meal.difficulty) }
-    var healthiness by rememberSaveable { mutableStateOf(meal.healthiness) }
-    var servings by rememberSaveable { mutableStateOf(meal.servings) }
-    var veg by rememberSaveable { mutableStateOf(meal.vegetarian) }
+fun MealItem0(meal: MealPlan) {
+    // Use remember with keys to ensure proper state updates
+    val description by remember(meal.id) { mutableStateOf(meal.description) }
+    val timeTaken by remember(meal.id) { mutableStateOf(meal.timeTaken) }
+    val difficulty by remember(meal.id) { mutableStateOf(meal.difficulty) }
+    val healthiness by remember(meal.id) { mutableStateOf(meal.healthiness) }
+    val servings by remember(meal.id) { mutableStateOf(meal.servings) }
+    val veg by remember(meal.id) { mutableStateOf(meal.vegetarian) }
 
     Card(
         modifier = Modifier
@@ -224,13 +198,8 @@ fun MealItem0(
         shape = RoundedCornerShape(8.dp),
         elevation = 4.dp
     ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
                     painter = painterResource(Res.drawable.meal),
                     contentDescription = null,
@@ -242,9 +211,7 @@ fun MealItem0(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = description.ifEmpty { "Meal Description" },
                         style = MaterialTheme.typography.subtitle1,
@@ -259,10 +226,10 @@ fun MealItem0(
                         fontSize = 10.sp,
                     )
                 }
-
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -307,13 +274,13 @@ fun MealItem0(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = healthiness,
+                        text = "Healthy",
                         style = MaterialTheme.typography.caption,
                         fontSize = 10.sp
                     )
                 }
 
-                // Servings
+                // Veg/Non-Veg
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(Res.drawable.icon_healthy),
@@ -326,7 +293,6 @@ fun MealItem0(
                         style = MaterialTheme.typography.caption,
                         fontSize = 10.sp
                     )
-
                 }
             }
         }

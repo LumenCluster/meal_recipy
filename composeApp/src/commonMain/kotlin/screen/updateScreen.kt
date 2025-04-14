@@ -55,6 +55,7 @@ import room_cmp.composeapp.generated.resources.veg
 import ui.home.MealPlanViewModel
 
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun updateMealScreen(
     viewModel: MealPlanViewModel,

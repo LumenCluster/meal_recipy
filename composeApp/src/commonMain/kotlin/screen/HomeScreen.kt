@@ -53,27 +53,35 @@ fun HomeScreen(
     onNavigateToUpdateMeal: (String, LocalDate, Int) -> Unit,
     onNavigateToCategoryScreen: (LocalDate) -> Unit,
     onBackClick: () -> Unit
-
-    ) {
+) {
     val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
     val daysOfWeek = (0 until 7).map { offset -> today.plus(offset, DateTimeUnit.DAY) }
     var selectedDay by rememberSaveable(stateSaver = LocalDateSaver) { mutableStateOf(daysOfWeek.first()) }
+
+    // Collect state and ensure recomposition on changes
+    val mealPlanState by viewModel.mealPlanState.collectAsState()
+
+    // Refresh data when screen is focused
+    LaunchedEffect(Unit) {
+        viewModel.loadMealPlans()
+    }
+
+    val mealsForDay by derivedStateOf {
+        mealPlanState.groupedByDay[selectedDay.dayOfWeek.name].orEmpty()
+    }
 
     Column(
         modifier = modifier.fillMaxSize().padding(16.dp)
     ) {
         Icon(
             painter = painterResource(Res.drawable.onback),
-            contentDescription = "About Icon",
-
+            contentDescription = "Back",
             tint = Color.Black,
-            modifier = Modifier
-//                    .padding(8.dp) // <-- Add your desired padding here
-                .clickable {
-                     onBackClick()
-                }
+            modifier = Modifier.clickable { onBackClick() }
         )
+
         Spacer(modifier = Modifier.height(12.dp))
+
         Text(
             text = "Meal Plan",
             style = MaterialTheme.typography.h6,
@@ -81,19 +89,19 @@ fun HomeScreen(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
         DaysOfWeekHeader(daysOfWeek, selectedDay, onDaySelected = { selectedDay = it })
-        val mealPlanState by viewModel.mealPlanState.collectAsState()
-        val mealsForDay = mealPlanState.groupedByDay[selectedDay.dayOfWeek.name].orEmpty()
 
         LazyColumn {
             item {
                 DayMealPlanCard(
                     day = selectedDay,
                     meals = mealsForDay,
-                    onDeleteMeal = { mealPlan -> viewModel.deleteMealPlan(mealPlan) },
+                    onDeleteMeal = { viewModel.deleteMealPlan(it) },
                     onAddMeal = { category -> onNavigateToAddMeal(category, selectedDay) },
                     onNavigateToCategoryScreen = { onNavigateToCategoryScreen(selectedDay) },
-                    onUpdateMeal = { category, mealId -> onNavigateToUpdateMeal(category, selectedDay, mealId) }
+                    onUpdateMeal = { category, mealId -> onNavigateToUpdateMeal(category, selectedDay, mealId) },
+                    key = mealsForDay.hashCode()
                 )
             }
         }
@@ -101,92 +109,151 @@ fun HomeScreen(
 }
 
 
+@Composable
+fun DaysOfWeekHeader(
+    daysOfWeek: List<LocalDate>,
+    selectedDay: LocalDate,
+    onDaySelected: (LocalDate) -> Unit
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        items(daysOfWeek.size) { index ->
+            val day = daysOfWeek[index]
+            val isSelected = day == selectedDay
+            DayItem(
+                day = day,
+                isSelected = isSelected,
+                onClick = { onDaySelected(day) }
+            )
+        }
+    }
+}
+
+@Composable
+fun DayItem(
+    day: LocalDate,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .padding(8.dp)
+            .background(
+                color = if (isSelected) Color(0xFF007370) else Color(0xFFDBEBEB),
+                shape = RoundedCornerShape(25.dp)
+            )
+            .clickable { onClick() }
+            .width(40.dp) // Increase width
+            .height(65.dp) // Increase height
+            .padding(5.dp)
+    ) {
+        Text(
+            text = day.dayOfWeek.name.take(3),
+            color = if (isSelected) Color.White else Color.Black,
+            fontSize = 12.sp
+        )
+
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(30.dp)
+                .clip(CircleShape)
+                .background(Color.White) // Highlight today's date
+        ) {
+            Text(text = day.dayOfMonth.toString(), color = Color.Black)
+        }
+    }
+}
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun DayMealPlanCard(
     day: LocalDate,
-    meals: Map<String, List<MealPlan>>, // Stores a list of meals per category
+    meals: Map<String, List<MealPlan>>,
     onDeleteMeal: (MealPlan) -> Unit,
     onAddMeal: (String) -> Unit,
     onUpdateMeal: (String, Int) -> Unit,
-    onNavigateToCategoryScreen: () -> Unit
+    onNavigateToCategoryScreen: () -> Unit,
+    key: Int? = null
 ) {
-    val hasMeals = meals.values.any { it.isNotEmpty() } // Check if any category has meals
+    key(key) {
+        val hasMeals = meals.values.any { it.isNotEmpty() }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .padding(10.dp)
-            .padding(bottom = 20.dp) // Added bottom padding
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp, horizontal = 10.dp)
+                .padding(bottom = 20.dp)
         ) {
-            Text(
-                text = "${day.dayOfWeek.name}, ${day.dayOfMonth} ${day.month.name}",
-                style = MaterialTheme.typography.h6,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Button(
-                onClick = { onNavigateToCategoryScreen() },
-                colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFFF5959)),
-                shape = RoundedCornerShape(50), // fully rounded button
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "ADD MEAL",
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(end = 4.dp)
-                    )
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add Icon",
-                        tint = Color.White,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (hasMeals) {
-            listOf("Breakfast", "Lunch", "Dinner").forEach { category ->
-                val mealList = meals[category] ?: emptyList()
-                if (mealList.isNotEmpty()) {
-                    MealCategorySection(category, mealList, onDeleteMeal, onAddMeal, onUpdateMeal)
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-        } else {
-            // Empty State when no meals are added
-            Column(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Image(
-                    painter = painterResource(Res.drawable.empty),
-                    contentDescription = "No Meal Plans added",
-                    modifier = Modifier
-                        .size(150.dp)
-                        .padding(16.dp)
-                )
                 Text(
-                    text = "No Meal Plans Added",
+                    text = "${day.dayOfWeek.name}, ${day.dayOfMonth} ${day.month.name}",
                     style = MaterialTheme.typography.h6,
-                    fontSize = 14.sp,
-                    color = Color.Gray
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
                 )
+                Button(
+                    onClick = { onNavigateToCategoryScreen() },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFFF5959)),
+                    shape = RoundedCornerShape(50),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "ADD MEAL",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Icon",
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (hasMeals) {
+                listOf("Breakfast", "Lunch", "Dinner").forEach { category ->
+                    val mealList = meals[category] ?: emptyList()
+                    if (mealList.isNotEmpty()) {
+                        MealCategorySection(category, mealList, onDeleteMeal, onAddMeal, onUpdateMeal)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(Res.drawable.empty),
+                        contentDescription = "No Meal Plans",
+                        modifier = Modifier.size(150.dp).padding(16.dp)
+                    )
+                    Text(
+                        text = "No Meal Plans Added",
+                        style = MaterialTheme.typography.h6,
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                }
             }
         }
     }
 }
+
 
 
 
@@ -339,7 +406,7 @@ fun MealItem(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = healthiness,
+                        text = "Healthy",
                         style = MaterialTheme.typography.caption,
                         fontSize = 10.sp
                     )
@@ -366,64 +433,7 @@ fun MealItem(
 }
 
 
-@Composable
-fun DaysOfWeekHeader(
-    daysOfWeek: List<LocalDate>,
-    selectedDay: LocalDate,
-    onDaySelected: (LocalDate) -> Unit
-) {
-    LazyRow(
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        items(daysOfWeek.size) { index ->
-            val day = daysOfWeek[index]
-            val isSelected = day == selectedDay
-            DayItem(
-                day = day,
-                isSelected = isSelected,
-                onClick = { onDaySelected(day) }
-            )
-        }
-    }
-}
 
-@Composable
-fun DayItem(
-    day: LocalDate,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .padding(8.dp)
-            .background(
-                color = if (isSelected) Color(0xFF007370) else Color(0xFFDBEBEB),
-                shape = RoundedCornerShape(25.dp)
-            )
-            .clickable { onClick() }
-            .width(40.dp) // Increase width
-            .height(65.dp) // Increase height
-            .padding(5.dp)
-    ) {
-        Text(
-            text = day.dayOfWeek.name.take(3),
-            color = if (isSelected) Color.White else Color.Black,
-            fontSize = 12.sp
-        )
-
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(30.dp)
-                .clip(CircleShape)
-                .background(Color.White) // Highlight today's date
-        ) {
-            Text(text = day.dayOfMonth.toString(), color = Color.Black)
-        }
-    }
-}
 
 //@Composable
 //fun DayMealPlanCard(

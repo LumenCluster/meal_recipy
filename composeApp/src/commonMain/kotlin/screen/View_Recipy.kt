@@ -30,7 +30,6 @@ import org.example.compose.data.network.models.Meal
 import org.example.compose.home.HomeViewModel
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
-import registerBackHandler
 import room_cmp.composeapp.generated.resources.Res
 import room_cmp.composeapp.generated.resources.back
 

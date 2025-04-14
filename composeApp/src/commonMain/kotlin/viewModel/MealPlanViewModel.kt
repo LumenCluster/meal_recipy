@@ -40,7 +40,7 @@ class MealPlanViewModel(private val mealPlanRepository: MealPlanRepository) : Vi
         return currentDate.toString() // Convert LocalDate to String in "yyyy-MM-dd" format
     }
 
-    private fun loadMealPlans() {
+    fun loadMealPlans() {
         viewModelScope.launch {
             mealPlanRepository.getAllMealPlans()
                 .catch { exception ->
@@ -125,6 +125,7 @@ class MealPlanViewModel(private val mealPlanRepository: MealPlanRepository) : Vi
     ) {
         viewModelScope.launch {
             try {
+                // Create updated meal plan
                 val updatedMealPlan = MealPlan(
                     id = id,
                     day = day,
@@ -137,19 +138,38 @@ class MealPlanViewModel(private val mealPlanRepository: MealPlanRepository) : Vi
                     date = date,
                     vegetarian = vegetarian
                 )
+
+                // Update in database
                 mealPlanRepository.updateMealPlan(updatedMealPlan)
-                _mealPlanState.update { state ->
-                    val updatedMeals = state.meals.map { if (it.id == id) updatedMealPlan else it }
-                    state.copy(
+
+                // Optimistically update UI state
+                _mealPlanState.update { currentState ->
+                    val updatedMeals = currentState.meals.map {
+                        if (it.id == id) updatedMealPlan else it
+                    }
+
+                    currentState.copy(
                         meals = updatedMeals,
-                        groupedByDay = groupMealsByDay(updatedMeals)
+                        groupedByDay = groupMealsByDay(updatedMeals),
+//                        lastUpdated = Clock.System.currentTimeMillis() // Add timestamp for change tracking
                     )
                 }
+
+                // Force refresh from database to ensure consistency
+                loadMealPlans()
+
             } catch (exception: Exception) {
+                // Handle error and revert state if needed
+                _mealPlanState.update { currentState ->
+                    currentState.copy(
+//                        error = "Failed to update meal: ${exception.localizedMessage}"
+                    )
+                }
+                // Optionally reload original data
+                loadMealPlans()
             }
         }
     }
-
     fun deleteMealPlan(mealPlan: MealPlan) {
         viewModelScope.launch {
             try {
@@ -199,11 +219,9 @@ data class MealPlanState(
 )
 
 // Factory class for creating MealPlanViewModel instances
-
 @Suppress("UNCHECKED_CAST")
 class MealPlanViewModelFactory(private val mealPlanRepository: MealPlanRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: KClass<T>, extras: CreationExtras): T {
         return MealPlanViewModel(mealPlanRepository = mealPlanRepository) as T
     }
 }
-

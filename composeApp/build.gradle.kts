@@ -66,6 +66,7 @@ kotlin {
 
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
+            implementation(libs.androidx.lifecycle.livedata.core.ktx)
 
 
         }

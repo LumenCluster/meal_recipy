@@ -6,13 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,14 +22,8 @@ import database.entity.MealPlan
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
-import room_cmp.composeapp.generated.resources.Res
-import room_cmp.composeapp.generated.resources.back
-import room_cmp.composeapp.generated.resources.empty
-import room_cmp.composeapp.generated.resources.icon_easy
-import room_cmp.composeapp.generated.resources.icon_healthy
-import room_cmp.composeapp.generated.resources.icon_time
-import room_cmp.composeapp.generated.resources.lun_ch
-import room_cmp.composeapp.generated.resources.meal
+import room_cmp.composeapp.generated.resources.*
+
 import ui.home.MealPlanViewModel
 
 @OptIn(ExperimentalResourceApi::class)
@@ -46,12 +34,22 @@ fun LunchMealScreen(
     selectedDay: LocalDate,
     onNavigateToUpdateMeal: (String, LocalDate, Int) -> Unit,
     onBackPress: () -> Unit
+) {
+    val mealPlanState by viewModel.mealPlanState.collectAsState()
 
-)
-{
+    // Refresh data when screen is focused
+    LaunchedEffect(Unit) {
+        viewModel.loadMealPlans()
+    }
+
+    val mealsForDay by derivedStateOf {
+        mealPlanState.groupedByDay[selectedDay.dayOfWeek.name].orEmpty()
+    }
+
+    val lunchMeals = mealsForDay["Lunch"].orEmpty()
+
     Column(
         modifier = Modifier.fillMaxSize().background(Color.White)
-
     ) {
         // Image with top gradient and back button overlay
         Box(
@@ -59,7 +57,6 @@ fun LunchMealScreen(
                 .fillMaxWidth()
                 .height(320.dp)
         ) {
-            // Background Image
             Image(
                 painter = painterResource(Res.drawable.lun_ch),
                 contentDescription = null,
@@ -72,20 +69,19 @@ fun LunchMealScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp) // Gradient only at the top
+                    .height(100.dp)
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color(0xCF000000), // 80% Black
-                                Color(0xAC2A2A2A), // 100% Dark Gray
-                                Color(0x00FFFFFF)  // Fully Transparent
+                                Color(0xCF000000),
+                                Color(0xAC2A2A2A),
+                                Color(0x00FFFFFF)
                             )
                         )
                     )
                     .align(Alignment.TopCenter)
             )
 
-            // Back Button
             IconButton(
                 onClick = { onBackPress() },
                 modifier = Modifier
@@ -103,10 +99,8 @@ fun LunchMealScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-
-        // Date
         Text(
-            text = "${selectedDay.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}, ${selectedDay.toString()}",
+            text = "${selectedDay.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}, ${selectedDay}",
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp)
@@ -119,30 +113,21 @@ fun LunchMealScreen(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-//        Spacer(modifier = Modifier.height(8.dp))
-
-        val mealPlanState by viewModel.mealPlanState.collectAsState()
-
-        // Show only breakfast meals for the selected day
-        val mealsForDay = mealPlanState.groupedByDay[selectedDay.dayOfWeek.name].orEmpty()
-            .filterKeys { it == "Lunch" }
-
         DayMealPlanCard2(
             day = selectedDay,
             meals = mealsForDay,
+            key = mealsForDay.hashCode()
         )
-
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        val hasMeals = mealsForDay["Lunch"]?.isNotEmpty() == true
+        val hasMeals = lunchMeals.isNotEmpty()
 
         if (hasMeals) {
             Button(
                 onClick = {
-                    val firstMeal = mealsForDay["Lunch"]?.firstOrNull()
-                    if (firstMeal != null) {
-                        onNavigateToUpdateMeal("Lunch", selectedDay, firstMeal.id)
+                    lunchMeals.firstOrNull()?.let { meal ->
+                        onNavigateToUpdateMeal("Lunch", selectedDay, meal.id)
                     }
                 },
                 modifier = Modifier
@@ -155,71 +140,63 @@ fun LunchMealScreen(
                 Text(text = "EDIT MEAL", color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
-
-
     }
 }
-
-
 
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun DayMealPlanCard2(
     day: LocalDate,
     meals: Map<String, List<MealPlan>>,
+    key: Int? = null
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
-        val category = "Lunch"
-        val mealList = meals[category]?.filter { it.date == day.toString() } ?: emptyList()
+    key(key) {
+        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+            val category = "Lunch"
+            val mealList = meals[category]?.filter { it.date == day.toString() } ?: emptyList()
 
-        if (mealList.isNotEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-            ) {
-                mealList.forEach { meal ->
-                    MealItem2(meal = meal)
-                    Spacer(modifier = Modifier.height(8.dp))
+            if (mealList.isNotEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                ) {
+                    mealList.forEach { meal ->
+                        MealItem2(meal = meal)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
-            }
-        } else {
-            // When there are no meals, show a placeholder UI
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Image(
-                    painter = painterResource(Res.drawable.empty), // Replace with a relevant empty state image
-                    contentDescription = "No meals",
-                    modifier = Modifier.size(100.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "No meals added for breakfast.",
-                    fontSize = 14.sp,
-                    color = Color.Gray,
-                    fontWeight = FontWeight.Medium
-                )
-
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(Res.drawable.empty),
+                        contentDescription = "No meals",
+                        modifier = Modifier.size(100.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "No meals added for lunch.",
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }
 }
 
-
 @OptIn(ExperimentalResourceApi::class)
 @Composable
-fun MealItem2(
-    meal: MealPlan,
-//    onDelete: (MealPlan) -> Unit,
-//    onUpdate: (MealPlan) -> Unit
-) {
-    var description by rememberSaveable { mutableStateOf(meal.description) }
-    var timeTaken by rememberSaveable { mutableStateOf(meal.timeTaken) }
-    var difficulty by rememberSaveable { mutableStateOf(meal.difficulty) }
-    var healthiness by rememberSaveable { mutableStateOf(meal.healthiness) }
-    var servings by rememberSaveable { mutableStateOf(meal.servings) }
-    var veg by rememberSaveable { mutableStateOf(meal.vegetarian) }
+fun MealItem2(meal: MealPlan) {
+    val description by remember(meal.id) { mutableStateOf(meal.description) }
+    val timeTaken by remember(meal.id) { mutableStateOf(meal.timeTaken) }
+    val difficulty by remember(meal.id) { mutableStateOf(meal.difficulty) }
+    val healthiness by remember(meal.id) { mutableStateOf(meal.healthiness) }
+    val servings by remember(meal.id) { mutableStateOf(meal.servings) }
+    val veg by remember(meal.id) { mutableStateOf(meal.vegetarian) }
 
     Card(
         modifier = Modifier
@@ -229,8 +206,7 @@ fun MealItem2(
         elevation = 4.dp
     ) {
         Column(
-            modifier = Modifier
-                .padding(16.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -246,9 +222,7 @@ fun MealItem2(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = description.ifEmpty { "Meal Description" },
                         style = MaterialTheme.typography.subtitle1,
@@ -263,16 +237,15 @@ fun MealItem2(
                         fontSize = 10.sp,
                     )
                 }
-
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Time Taken
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(Res.drawable.icon_time),
@@ -280,14 +253,9 @@ fun MealItem2(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "$timeTaken min",
-                        style = MaterialTheme.typography.caption,
-                        fontSize = 10.sp
-                    )
+                    Text(text = "$timeTaken min", style = MaterialTheme.typography.caption, fontSize = 10.sp)
                 }
 
-                // Difficulty
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(Res.drawable.icon_easy),
@@ -295,14 +263,9 @@ fun MealItem2(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = difficulty,
-                        style = MaterialTheme.typography.caption,
-                        fontSize = 10.sp
-                    )
+                    Text(text = difficulty, style = MaterialTheme.typography.caption, fontSize = 10.sp)
                 }
 
-                // Healthiness
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(Res.drawable.icon_healthy),
@@ -310,14 +273,9 @@ fun MealItem2(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = healthiness,
-                        style = MaterialTheme.typography.caption,
-                        fontSize = 10.sp
-                    )
+                    Text(text = "Healthy", style = MaterialTheme.typography.caption, fontSize = 10.sp)
                 }
 
-                // Servings
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(Res.drawable.icon_healthy),
@@ -330,10 +288,8 @@ fun MealItem2(
                         style = MaterialTheme.typography.caption,
                         fontSize = 10.sp
                     )
-
                 }
             }
         }
     }
 }
-

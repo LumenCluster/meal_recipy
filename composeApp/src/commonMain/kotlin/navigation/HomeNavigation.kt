@@ -127,8 +127,11 @@ fun HomeNavigation(
                 category = category,
                 date = date,
                 mealId = mealId,
-                onBackPress = { navController.popBackStack() } ,
-                        onMealUpdated = { navController.popBackStack() }
+                onBackPress = { navController.navigateUp() },
+                onMealUpdated = {
+                    // Trigger a refresh of the meal data
+                    navController.navigateUp() // Navigate back after updating
+                }
             )
         }
 
