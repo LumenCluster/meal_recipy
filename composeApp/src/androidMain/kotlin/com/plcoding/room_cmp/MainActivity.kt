@@ -16,6 +16,7 @@ class MainActivity : ComponentActivity() {
         val mealDao = database.mealPlanDao()
         val profileDao = database.profileDao()
 
+        AppContextHolder.context = this // set it here
 
         Graph.initialize(database)
 

@@ -230,6 +230,7 @@ fun updateMealScreen(
 
 
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun StyledDropdownField(
     label: String,
@@ -374,6 +375,7 @@ fun ToggleBtn(
     }
 }
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun MealServings(
     servings: Int,

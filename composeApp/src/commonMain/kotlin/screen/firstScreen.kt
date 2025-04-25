@@ -38,9 +38,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import database.entity.Profile
 import kotlinx.coroutines.launch
+import openMoreApps
 import org.example.compose.home.HomeViewModel
 import org.example.compose.home.ProfileViewModel
 import org.jetbrains.compose.resources.ExperimentalResourceApi
+import rateApp
 import room_cmp.composeapp.generated.resources.Res
 import room_cmp.composeapp.generated.resources.abt
 import room_cmp.composeapp.generated.resources.add_meal_0
@@ -52,6 +54,7 @@ import room_cmp.composeapp.generated.resources.ratee
 import room_cmp.composeapp.generated.resources.shre
 import room_cmp.composeapp.generated.resources.view
 import room_cmp.composeapp.generated.resources.weekly
+import shareAppLink
 
 @Composable
 fun FirstScreen(
@@ -228,18 +231,27 @@ fun DrawerContent(
             navController.navigate("about") // Navigate to profile screen
         }
 
-        DrawerMenuItem(icon = Res.drawable.shre, title = "Share App") {
-//            profileViewModel.deleteAllProfiles()
+        DrawerMenuItem(
+            icon = Res.drawable.shre,
+            title = "Share App"
+        ) {
+            val message = "Check out this app: https://play.google.com/store/apps/details?id=com.yourapp.package"
+            shareAppLink(message)
         }
 
+
+
         DrawerMenuItem(icon = Res.drawable.ratee, title = "Rate Our App") {
+         rateApp()
+
+
         }
 
         DrawerMenuItem(icon = Res.drawable.moree, title = "More Apps") {
+            openMoreApps()
         }
     }
 }
-
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun DrawerMenuItem(icon: DrawableResource, title: String, onClick: () -> Unit) {
@@ -247,7 +259,7 @@ fun DrawerMenuItem(icon: DrawableResource, title: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable(onClick = onClick)
             .padding(vertical = 10.dp, horizontal = 10.dp)
     ) {
         Image(
@@ -264,6 +276,7 @@ fun DrawerMenuItem(icon: DrawableResource, title: String, onClick: () -> Unit) {
         )
     }
 }
+
 
 @OptIn(ExperimentalResourceApi::class)
 @Composable

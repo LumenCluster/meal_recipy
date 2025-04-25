@@ -44,6 +44,7 @@ fun AddMealScreen(
     var difficulty by rememberSaveable { mutableStateOf("Difficulty") }
     var servings by rememberSaveable { mutableStateOf(1) }
     var mealType by rememberSaveable { mutableStateOf("Vegetarian") }
+    var validationError by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -185,26 +186,40 @@ fun AddMealScreen(
                 }
             )
         }
-
+        // Show error message if validation fails
+        if (validationError.isNotEmpty()) {
+            Text(
+                text = validationError,
+                color = Color.Red,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
 
         // Save Meal Button
         Button(
             onClick = {
-                viewModel.saveMealPlan(
-                    day = date.dayOfWeek.name,
-                    category = category,
-                    description = mealName,
-                    timeTaken = timeTaken,
-                    difficulty = difficulty,
-                    servings = servings,
-                    healthiness = "Healthy", // Default value
-                    date = date.toString(),
-                    vegetarian = mealType == "Vegetarian"
-                )
-                onMealSaved()
+                if (mealName.isBlank() || timeTaken == 0 || difficulty == "Difficulty") {
+                    validationError = "Enter data in all fields to save"
+                } else {
+                    validationError = ""
+                    viewModel.saveMealPlan(
+                        day = date.dayOfWeek.name,
+                        category = category,
+                        description = mealName,
+                        timeTaken = timeTaken,
+                        difficulty = difficulty,
+                        servings = servings,
+                        healthiness = "Healthy", // Default value
+                        date = date.toString(),
+                        vegetarian = mealType == "Vegetarian"
+                    )
+                    onMealSaved()
+                }
             },
+
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp), // Set the height to 50dp

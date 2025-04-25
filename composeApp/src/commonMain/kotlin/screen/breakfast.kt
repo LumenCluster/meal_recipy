@@ -7,7 +7,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +31,8 @@ import room_cmp.composeapp.generated.resources.icon_healthy
 import room_cmp.composeapp.generated.resources.icon_time
 import room_cmp.composeapp.generated.resources.meal
 import ui.home.MealPlanViewModel
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 
 @OptIn(ExperimentalResourceApi::class)
 @Composable
@@ -43,13 +44,11 @@ fun BreakfastMealScreen(
     onNavigateToUpdateMeal: (String, LocalDate, Int) -> Unit,
     onBackPress: () -> Unit
 ) {
-    // Collect state and ensure recomposition on changes
     val mealPlanState by viewModel.mealPlanState.collectAsState()
     val mealsForDay by derivedStateOf {
         mealPlanState.groupedByDay[selectedDay.dayOfWeek.name].orEmpty()
     }
 
-    // Refresh data when screen is focused
     LaunchedEffect(Unit) {
         viewModel.loadMealPlans()
     }
@@ -82,7 +81,7 @@ fun BreakfastMealScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "${selectedDay.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}, ${selectedDay}",
+            text = "${selectedDay.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}, $selectedDay",
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp)
@@ -95,7 +94,6 @@ fun BreakfastMealScreen(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-        // Key added to force recomposition when meals change
         DayMealPlanCard0(
             day = selectedDay,
             meals = mealsForDay,
@@ -104,14 +102,12 @@ fun BreakfastMealScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        val hasMeals = mealsForDay["Breakfast"]?.isNotEmpty() == true
+        val breakfastMeals = mealsForDay["Breakfast"]?.filter { it.date == selectedDay.toString() } ?: emptyList()
 
-        if (hasMeals) {
+        if (breakfastMeals.size == 1) {
             Button(
                 onClick = {
-                    mealsForDay["Breakfast"]?.firstOrNull()?.let { meal ->
-                        onNavigateToUpdateMeal("Breakfast", selectedDay, meal.id)
-                    }
+                    onNavigateToUpdateMeal("Breakfast", selectedDay, breakfastMeals.first().id)
                 },
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
@@ -133,57 +129,50 @@ fun DayMealPlanCard0(
     meals: Map<String, List<MealPlan>>,
     key: Int? = null
 ) {
-    key(key) { // ✅ Correct usage
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 10.dp)
-        ) {
-            val category = "Breakfast"
-            val mealList = meals[category]?.filter { it.date == day.toString() } ?: emptyList()
+    key(key) {
+        val category = "Breakfast"
+        val mealList = meals[category]?.filter { it.date == day.toString() } ?: emptyList()
 
-            if (mealList.isNotEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                ) {
-                    mealList.forEach { meal ->
-                        MealItem0(meal = meal)
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
+        if (mealList.isNotEmpty()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(mealList) { meal ->
+                    MealItem0(meal = meal)
                 }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Image(
-                        painter = painterResource(Res.drawable.empty),
-                        contentDescription = "No meals",
-                        modifier = Modifier.size(100.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "No meals added for breakfast.",
-                        fontSize = 14.sp,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Image(
+                    painter = painterResource(Res.drawable.empty),
+                    contentDescription = "No meals",
+                    modifier = Modifier.size(100.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "No meals added for breakfast.",
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
 }
 
-
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun MealItem0(meal: MealPlan) {
-    // Use remember with keys to ensure proper state updates
     val description by remember(meal.id) { mutableStateOf(meal.description) }
     val timeTaken by remember(meal.id) { mutableStateOf(meal.timeTaken) }
     val difficulty by remember(meal.id) { mutableStateOf(meal.difficulty) }
@@ -235,7 +224,6 @@ fun MealItem0(meal: MealPlan) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Time Taken
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(Res.drawable.icon_time),
@@ -250,7 +238,6 @@ fun MealItem0(meal: MealPlan) {
                     )
                 }
 
-                // Difficulty
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(Res.drawable.icon_easy),
@@ -265,7 +252,6 @@ fun MealItem0(meal: MealPlan) {
                     )
                 }
 
-                // Healthiness
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(Res.drawable.icon_healthy),
@@ -280,11 +266,10 @@ fun MealItem0(meal: MealPlan) {
                     )
                 }
 
-                // Veg/Non-Veg
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(Res.drawable.icon_healthy),
-                        contentDescription = "Servings",
+                        contentDescription = "Veg Status",
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))

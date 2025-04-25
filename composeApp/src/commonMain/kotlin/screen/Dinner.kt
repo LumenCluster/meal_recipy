@@ -3,6 +3,7 @@ package screen
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -23,7 +24,6 @@ import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import room_cmp.composeapp.generated.resources.*
-
 import ui.home.MealPlanViewModel
 
 @OptIn(ExperimentalResourceApi::class)
@@ -98,16 +98,20 @@ fun DinnerMealScreen(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
-
-        DayMealPlanCard1(
-            day = selectedDay,
-            meals = mealsForDay,
-            key = mealsForDay.hashCode()
-        )
+        LazyColumn {
+            item {
+                DayMealPlanCard1(
+                    day = selectedDay,
+                    meals = mealsForDay,
+                    key = mealsForDay.hashCode()
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (dinnerMeals.isNotEmpty()) {
+        // Show the Edit Meal button only if there's exactly one meal for dinner
+        if (dinnerMeals.size == 1) {
             Button(
                 onClick = {
                     dinnerMeals.firstOrNull()?.let { meal ->
@@ -130,7 +134,7 @@ fun DinnerMealScreen(
 @Composable
 fun DayMealPlanCard1(
     day: LocalDate,
-    meals: Map<String, List<MealPlan>>,
+    meals: Map<String, List<MealPlan>> = emptyMap(),
     key: Int? = null
 ) {
     key(key) {

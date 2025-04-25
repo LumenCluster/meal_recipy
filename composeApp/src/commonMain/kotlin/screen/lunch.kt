@@ -3,6 +3,7 @@ package screen
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -23,7 +24,6 @@ import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import room_cmp.composeapp.generated.resources.*
-
 import ui.home.MealPlanViewModel
 
 @OptIn(ExperimentalResourceApi::class)
@@ -113,17 +113,20 @@ fun LunchMealScreen(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-        DayMealPlanCard2(
-            day = selectedDay,
-            meals = mealsForDay,
-            key = mealsForDay.hashCode()
-        )
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            item {
+                DayMealPlanCard2(
+                    day = selectedDay,
+                    meals = mealsForDay,
+                    key = mealsForDay.hashCode()
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        val hasMeals = lunchMeals.isNotEmpty()
-
-        if (hasMeals) {
+        // Show "EDIT MEAL" button only if there is exactly one meal
+        if (lunchMeals.size == 1) {
             Button(
                 onClick = {
                     lunchMeals.firstOrNull()?.let { meal ->
