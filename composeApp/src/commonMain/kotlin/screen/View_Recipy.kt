@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.rememberNavController
 import coil3.compose.AsyncImage
 import org.example.compose.data.network.models.Meal
 import org.example.compose.home.HomeViewModel
@@ -42,14 +41,27 @@ fun ViewRecipy(
     onBackClick: () -> Unit
 ) {
     val homeState by homeViewModel.homeState.collectAsState()
-    var selectedCategory by remember { mutableStateOf("Chinese") }
-    var showPopup by remember { mutableStateOf(false) }
-    val categories = listOf("American", "Canadian", "Chinese", "French", "Indian", "Mexican", "Thai", "Turkish")
 
+    // Map display name -> API category
+    val categoriesMap = mapOf(
+        "American" to "American",
+        "Canadian" to "Canadian",
+        "Chinese" to "Chinese",
+        "French" to "French",
+        "Pakistan" to "Indian",
+        "Mexican" to "Mexican",
+        "Thai" to "Thai",
+        "Turkish" to "Turkish"
+    )
+
+    var selectedCategoryDisplay by remember { mutableStateOf("Chinese") }
+    var showPopup by remember { mutableStateOf(false) }
     var iconPosition by remember { mutableStateOf(0f) }
 
-    LaunchedEffect(selectedCategory) {
-        homeViewModel.fetchMeals(selectedCategory)
+    // Fetch meals based on the mapped API category
+    LaunchedEffect(selectedCategoryDisplay) {
+        val apiCategory = categoriesMap[selectedCategoryDisplay] ?: selectedCategoryDisplay
+        homeViewModel.fetchMeals(apiCategory)
     }
 
     Column(
@@ -79,7 +91,7 @@ fun ViewRecipy(
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(modifier = Modifier.fillMaxWidth()) {
                 TextField(
-                    value = selectedCategory,
+                    value = selectedCategoryDisplay,
                     onValueChange = {},
                     readOnly = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -106,25 +118,25 @@ fun ViewRecipy(
                     Popup(
                         alignment = Alignment.TopEnd,
                         onDismissRequest = { showPopup = false },
-                        offset = IntOffset(0, iconPosition.toInt() + 10) // Adjust to position below the arrow
+                        offset = IntOffset(0, iconPosition.toInt() + 10)
                     ) {
                         Card(
                             modifier = Modifier
                                 .width(250.dp)
                                 .border(0.dp, Color.Gray, shape = RoundedCornerShape(8.dp)),
                             elevation = 8.dp,
-                            backgroundColor = Color(0xFFF0F0F0) // ✅ Set background to #F0F0F0
+                            backgroundColor = Color(0xFFF0F0F0)
                         ) {
                             Column {
-                                categories.forEach { category ->
+                                categoriesMap.keys.forEach { displayName ->
                                     Text(
-                                        text = category,
+                                        text = displayName,
                                         fontSize = 14.sp,
-                                        color = Color.Black, // Ensures text visibility on light background
+                                        color = Color.Black,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable {
-                                                selectedCategory = category
+                                                selectedCategoryDisplay = displayName
                                                 showPopup = false
                                             }
                                             .padding(vertical = 8.dp, horizontal = 16.dp)
@@ -146,7 +158,6 @@ fun ViewRecipy(
                     CircularProgressIndicator()
                 }
             }
-
             homeState.error != null -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
@@ -156,7 +167,6 @@ fun ViewRecipy(
                     )
                 }
             }
-
             else -> {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(homeState.meals) { meal ->
@@ -167,13 +177,6 @@ fun ViewRecipy(
         }
     }
 }
-
-
-
-
-
-
-
 
 @Composable
 fun FoodItems(
@@ -202,7 +205,7 @@ fun FoodItems(
                     modifier = Modifier
                         .size(50.dp)
                         .clip(CircleShape),
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Crop
                 )
 
                 Spacer(modifier = Modifier.width(16.dp))
